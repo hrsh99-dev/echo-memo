@@ -25,9 +25,11 @@ export default function AskPage() {
   const [conversation, setConversation] = useState<ConversationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [speaking, setSpeaking] = useState(false);
-  const [speechAvailable, setSpeechAvailable] = useState(false);
+  const [loadingAudio, setLoadingAudio] = useState(false);
+  const [speechAvailable, setSpeechAvailable] = useState(true);
   const [voiceState, setVoiceState] = useState<'idle' | 'recording' | 'transcribing'>('idle');
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const conversationEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -43,14 +45,19 @@ export default function AskPage() {
     conversationEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation]);
 
-  // Cancel speech if user navigates away
+  // Cancel speech / audio if user navigates away
   useEffect(() => {
-    return () => { window.speechSynthesis?.cancel(); };
+    return () => {
+      window.speechSynthesis?.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
   }, []);
 
-  // Use browser-native Web Speech API — no API key or backend needed
   const checkSpeechStatus = () => {
-    setSpeechAvailable('speechSynthesis' in window);
+    setSpeechAvailable(true);
   };
 
   const handleAsk = async (q?: string) => {
@@ -91,12 +98,9 @@ export default function AskPage() {
     handleAsk();
   };
 
-  const handleSpeak = (text: string) => {
-    if (!('speechSynthesis' in window)) return;
-
-    // Stop any ongoing speech
-    if (speaking) {
-      window.speechSynthesis.cancel();
+  const fallbackGoogleTTS = (text: string) => {
+    if (!('speechSynthesis' in window)) {
+      showToast('Speech playback is not supported in this browser', 'error');
       setSpeaking(false);
       return;
     }
@@ -104,7 +108,6 @@ export default function AskPage() {
     const utterance = new SpeechSynthesisUtterance(text);
     utteranceRef.current = utterance;
 
-    // Pick a natural-sounding English voice if available
     const voices = window.speechSynthesis.getVoices();
     const preferred = voices.find(
       (v) => v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Premium'))
@@ -123,6 +126,59 @@ export default function AskPage() {
 
     setSpeaking(true);
     window.speechSynthesis.speak(utterance);
+  };
+
+  const handleSpeak = async (text: string) => {
+    // If already speaking, stop playback
+    if (speaking) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
+      }
+      window.speechSynthesis?.cancel();
+      setSpeaking(false);
+      return;
+    }
+
+    setLoadingAudio(true);
+
+    try {
+      // 1. Try ElevenLabs high-fidelity realistic voice first
+      const audioBlob = await api.textToSpeech(text);
+      if (audioBlob && audioBlob.size > 0) {
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
+
+        audio.onplay = () => {
+          setSpeaking(true);
+          setLoadingAudio(false);
+        };
+
+        audio.onended = () => {
+          setSpeaking(false);
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+        };
+
+        audio.onerror = () => {
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+          fallbackGoogleTTS(text);
+        };
+
+        await audio.play();
+        return;
+      }
+    } catch {
+      // ElevenLabs unavailable or rate-limited — fallback to Google TTS
+    } finally {
+      setLoadingAudio(false);
+    }
+
+    // 2. Fallback to Google / browser TTS
+    fallbackGoogleTTS(text);
   };
 
   return (
@@ -165,10 +221,17 @@ export default function AskPage() {
                   <button
                     className="btn btn-ghost btn-sm"
                     onClick={() => handleSpeak(item.text)}
+                    disabled={loadingAudio}
                     style={{ marginBottom: 'var(--space-3)' }}
                   >
-                    {speaking ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                    {speaking ? 'Stop' : 'Read aloud'}
+                    {loadingAudio ? (
+                      <Loader2 size={14} className="spin" />
+                    ) : speaking ? (
+                      <VolumeX size={14} />
+                    ) : (
+                      <Volume2 size={14} />
+                    )}
+                    {loadingAudio ? 'Generating voice…' : speaking ? 'Stop' : 'Read aloud'}
                   </button>
                 )}
 
