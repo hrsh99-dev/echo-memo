@@ -101,6 +101,17 @@ def create_app() -> FastAPI:
     app.include_router(inbox.router)
     app.include_router(tasks.router)
 
+    @app.get("/", tags=["Root"])
+    async def root():
+        return {
+            "name": "EchoMemo API",
+            "status": "online",
+            "version": "1.0.0",
+            "health": "/api/v1/health/live",
+            "ready": "/api/v1/health/ready",
+            "frontend": settings.frontend_origin,
+        }
+
     return app
 
 
