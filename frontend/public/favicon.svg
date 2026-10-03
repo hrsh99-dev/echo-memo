@@ -1,0 +1,44 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="emBadgeGrad" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2F755B" />
+      <stop offset="50%" stop-color="#205844" />
+      <stop offset="100%" stop-color="#143B2D" />
+    </linearGradient>
+    <radialGradient id="emTopSheen" cx="50%" cy="12%" r="55%" fx="50%" fy="8%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.28" />
+      <stop offset="50%" stop-color="#FFFFFF" stop-opacity="0.08" />
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+    </radialGradient>
+    <linearGradient id="emRimGrad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.45" />
+      <stop offset="35%" stop-color="#8FC2AE" stop-opacity="0.25" />
+      <stop offset="70%" stop-color="#0B231B" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#05140F" stop-opacity="0.6" />
+    </linearGradient>
+    <linearGradient id="emBarGrad" x1="0" y1="12" x2="0" y2="36" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="55%" stop-color="#F0F7F3" />
+      <stop offset="100%" stop-color="#C9DFD5" />
+    </linearGradient>
+    <linearGradient id="emWaveGrad" x1="28" y1="14" x2="40" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#A8CEBE" stop-opacity="0.75" />
+    </linearGradient>
+  </defs>
+
+  <!-- Outer Squircle Badge with Bevel Rim -->
+  <rect x="3" y="3" width="42" height="42" rx="12" fill="url(#emBadgeGrad)" stroke="url(#emRimGrad)" stroke-width="1.2" />
+
+  <!-- Specular Highlight -->
+  <rect x="3.6" y="3.6" width="40.8" height="40.8" rx="11.4" fill="url(#emTopSheen)" />
+
+  <!-- Minimalist Graphic: 3 Precision Acoustic Sound Bars + 2 Expanding Echo Waves -->
+  <g>
+    <rect x="13.5" y="19" width="3" height="10" rx="1.5" fill="url(#emBarGrad)" />
+    <rect x="19" y="13" width="3.2" height="22" rx="1.6" fill="url(#emBarGrad)" />
+    <rect x="24.8" y="17" width="3" height="14" rx="1.5" fill="url(#emBarGrad)" />
+    <path d="M 31.5 18.5 C 33.8 20.2 35.2 22.2 35.2 24 C 35.2 25.8 33.8 27.8 31.5 29.5" stroke="url(#emWaveGrad)" stroke-width="2.2" stroke-linecap="round" />
+    <path d="M 36.5 15 C 39.8 17.6 41.5 20.8 41.5 24 C 41.5 27.2 39.8 30.4 36.5 33" stroke="url(#emWaveGrad)" stroke-width="1.8" stroke-linecap="round" stroke-opacity="0.55" />
+  </g>
+</svg>

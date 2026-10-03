@@ -1,0 +1,64 @@
+# ──────────────────────────────────────────
+# Python
+# ──────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Build / distribution
+*.egg-info/
+build/
+dist/
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# ──────────────────────────────────────────
+# Environment / Secrets — NEVER commit these
+# ──────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+
+# ──────────────────────────────────────────
+# Node / Frontend
+# ──────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ──────────────────────────────────────────
+# IDE / Editor
+# ──────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ──────────────────────────────────────────
+# Temporary / misc
+# ──────────────────────────────────────────
+*.log
+tmp/
+temp/
