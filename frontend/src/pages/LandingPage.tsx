@@ -5,6 +5,7 @@
  */
 
 import { useState, type FormEvent } from 'react';
+import { flushSync } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -51,21 +52,21 @@ export default function LandingPage() {
       }
     }
 
-    setLoading(true);
+    // flushSync forces React to paint the spinner BEFORE the await suspends
+    flushSync(() => setLoading(true));
     try {
       if (mode === 'login') {
         await login(email.trim(), password);
         navigate('/');
       } else {
         await register(email.trim(), password, name.trim());
-        showToast('Account created successfully! Welcome to EchoMemo.', 'success');
         navigate('/');
+        showToast('Account created successfully! Welcome to EchoMemo.', 'success');
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Authentication failed';
       setError(msg);
       showToast(msg, 'error');
-    } finally {
       setLoading(false);
     }
   };
@@ -74,7 +75,8 @@ export default function LandingPage() {
     setError(null);
     setEmail('arjun.sharma@iitb.ac.in');
     setPassword('Demo@1234');
-    setLoadingDemo(true);
+    // flushSync forces React to paint the demo spinner immediately
+    flushSync(() => setLoadingDemo(true));
     try {
       await login('arjun.sharma@iitb.ac.in', 'Demo@1234');
       navigate('/');
@@ -82,7 +84,6 @@ export default function LandingPage() {
       const msg = err instanceof Error ? err.message : 'Demo login failed';
       setError(msg);
       showToast(msg, 'error');
-    } finally {
       setLoadingDemo(false);
     }
   };

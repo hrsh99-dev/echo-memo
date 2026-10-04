@@ -824,10 +824,13 @@ a:hover {
   height: 24px;
   min-width: 24px;
   border-radius: 50% !important;
+  /* Explicit reset — prevents global `button { color: inherit; line-height: inherit }`
+     from picking up unexpected values from the dark toast background */
   border: none !important;
   outline: none !important;
   background: transparent !important;
-  color: rgba(255, 255, 255, 0.7) !important;
+  color: rgba(255, 255, 255, 0.65) !important;
+  line-height: 1 !important;
   cursor: pointer;
   padding: 0;
   transition: background 150ms ease, color 150ms ease, transform 150ms ease;
@@ -835,6 +838,10 @@ a:hover {
   appearance: none;
   -webkit-appearance: none;
   box-shadow: none !important;
+  /* Ensure the X icon always renders on top and is never clipped */
+  position: relative;
+  z-index: 1;
+  overflow: visible;
 }
 
 .toast-dismiss:hover {
@@ -891,6 +898,10 @@ a:hover {
   border: 3px solid var(--color-border);
   border-top-color: var(--color-primary);
   border-radius: 50%;
+  /* GPU compositing — prevents main-thread stalls from freezing this spinner */
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
   animation: spinner 0.7s linear infinite;
 }
 
@@ -913,10 +924,14 @@ a:hover {
 .spin {
   display: inline-block !important;
   transform-origin: center center !important;
+  /* translateZ(0) promotes this element to its own GPU compositor layer,
+     preventing the main-thread JS from pausing the animation */
+  transform: translateZ(0);
   animation: spin 0.75s linear infinite !important;
   will-change: transform;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  isolation: isolate;
 }
 
 .landing-submit-btn:disabled {
