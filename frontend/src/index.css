@@ -845,7 +845,7 @@ a:hover {
 }
 
 .toast-dismiss:hover {
-  background: rgba(255, 255, 255, 0.2) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
   color: #ffffff !important;
 }
 
@@ -853,9 +853,18 @@ a:hover {
   transform: scale(0.92);
 }
 
+/* Block ALL focus outlines/box-shadows on the dismiss button —
+   the global :focus-visible rule must not bleed in here */
+.toast-dismiss:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Only keyboard users get a visible focus ring (accessibility) */
 .toast-dismiss:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.8) !important;
-  outline-offset: 1px;
+  outline: 2px solid rgba(255, 255, 255, 0.85) !important;
+  outline-offset: 2px;
+  box-shadow: none !important;
 }
 
 .toast-dismiss svg {
