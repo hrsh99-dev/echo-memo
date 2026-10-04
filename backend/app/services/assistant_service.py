@@ -101,10 +101,18 @@ Answer based ONLY on the notes above. If the notes don't have enough information
 
             answer_text = response.text.strip() if response.text else "Unable to generate an answer. Please try again."
 
+            is_insufficient = any(phrase in answer_text.lower() for phrase in [
+                "don't contain enough information",
+                "do not contain enough information",
+                "doesn't contain enough information",
+                "not enough information",
+                "no notes contain",
+            ])
+
             return {
                 "answer": answer_text,
-                "sources": sources,
-                "disclaimer": "This answer is generated from your saved notes and may be incomplete.",
+                "sources": [] if is_insufficient else sources,
+                "disclaimer": "No matching information was found in your saved notes." if is_insufficient else "This answer is generated from your saved notes and may be incomplete.",
             }
 
         except Exception as e:
