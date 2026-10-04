@@ -3,7 +3,7 @@
  */
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
 interface Toast {
   id: number;
@@ -19,6 +19,12 @@ const ToastContext = createContext<ToastContextType | null>(null);
 
 let toastId = 0;
 
+const TOAST_ICONS = {
+  success: CheckCircle,
+  error: AlertCircle,
+  info: Info,
+};
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -27,7 +33,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4000);
+    }, 5000);
   }, []);
 
   const dismiss = (id: number) => {
@@ -37,20 +43,23 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="toast-container">
-        {toasts.map(toast => (
-          <div key={toast.id} className={`toast toast-${toast.type}`}>
-            <span>{toast.message}</span>
-            <button
-              className="btn-icon btn-ghost"
-              onClick={() => dismiss(toast.id)}
-              aria-label="Dismiss notification"
-              style={{ marginLeft: 'auto', padding: '2px', minWidth: 'auto', width: 'auto', height: 'auto' }}
-            >
-              <X size={14} />
-            </button>
-          </div>
-        ))}
+      <div className="toast-container" role="region" aria-label="Notifications" aria-live="polite">
+        {toasts.map(toast => {
+          const Icon = TOAST_ICONS[toast.type];
+          return (
+            <div key={toast.id} className={`toast toast-${toast.type}`} role="alert">
+              <Icon size={16} className="toast-icon" />
+              <span className="toast-message">{toast.message}</span>
+              <button
+                className="toast-dismiss"
+                onClick={() => dismiss(toast.id)}
+                aria-label="Dismiss notification"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          );
+        })}
       </div>
     </ToastContext.Provider>
   );

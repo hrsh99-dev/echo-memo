@@ -147,9 +147,15 @@ export default function SettingsPage() {
                 Permanently delete your account, all notes, embeddings, and associated data. This cannot be undone.
               </div>
             </div>
-            <button className="btn btn-destructive" onClick={() => setShowDeleteAccount(true)}>
-              <Trash2 size={14} /> Delete
-            </button>
+            {user?.email === 'arjun.sharma@iitb.ac.in' || user?.email === 'demo@echomemo.ai' ? (
+              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', fontStyle: 'italic', maxWidth: '180px', textAlign: 'right' }}>
+                Demo accounts cannot be deleted
+              </span>
+            ) : (
+              <button className="btn btn-destructive" onClick={() => setShowDeleteAccount(true)}>
+                <Trash2 size={14} /> Delete
+              </button>
+            )}
           </div>
         </div>
       </div>

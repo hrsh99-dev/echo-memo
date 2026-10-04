@@ -60,16 +60,24 @@ class ApiClient {
     }
 
     let response: Response;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
       response = await fetch(`${API_BASE}${path}`, {
         ...options,
         headers,
+        signal: controller.signal,
       });
     } catch (networkErr) {
+      if ((networkErr as Error).name === 'AbortError') {
+        throw new Error('Request timed out. Please check your connection and try again.');
+      }
       // fetch() itself failed — network down, backend unreachable, CORS blocked
       throw new Error(
         'Unable to reach the server. Please check your internet connection and try again.'
       );
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     // Try to refresh token on 401

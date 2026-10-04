@@ -769,20 +769,58 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  pointer-events: none;
 }
 
 .toast {
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-4);
   background: var(--color-text-primary);
   color: white;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   font-size: var(--font-size-sm);
-  box-shadow: var(--shadow-md);
-  animation: slideIn 200ms ease;
+  box-shadow: var(--shadow-lg);
+  animation: toastSlideIn 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  max-width: 380px;
+  max-width: 400px;
+  min-width: 240px;
+  pointer-events: all;
+}
+
+.toast-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.toast-message {
+  flex: 1;
+  line-height: var(--line-height-normal);
+}
+
+.toast-dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: rgba(255, 255, 255, 0.18);
+  color: white;
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--transition-fast);
+  margin-left: auto;
+}
+
+.toast-dismiss:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.toast-dismiss svg {
+  display: block;
 }
 
 .toast-success {
@@ -791,6 +829,42 @@ a:hover {
 
 .toast-error {
   background: var(--color-destructive);
+}
+
+.toast-info {
+  background: #3B6FBB;
+}
+
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(28px) scale(0.95); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+/* ===== App Loading Screen ===== */
+.app-loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+.app-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spinner 0.7s linear infinite;
+}
+
+@keyframes spinner {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== Spin utility (for Loader2 icon) ===== */
+.spin {
+  animation: spinner 0.8s linear infinite;
 }
 
 @keyframes slideIn {
@@ -845,6 +919,31 @@ a:hover {
   margin-top: var(--space-6);
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+}
+
+/* Inline error banner on login/register forms */
+.auth-error-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-destructive-light);
+  border: 1px solid rgba(196, 64, 64, 0.25);
+  border-radius: var(--radius-md);
+  color: var(--color-destructive);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-4);
+  animation: toastSlideIn 200ms ease;
+}
+
+.auth-error-banner svg {
+  flex-shrink: 0;
+}
+
+/* Error state for form inputs */
+.form-input-error {
+  border-color: var(--color-destructive) !important;
+  box-shadow: 0 0 0 3px rgba(196, 64, 64, 0.1) !important;
 }
 
 /* ===== Settings ===== */

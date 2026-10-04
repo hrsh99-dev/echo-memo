@@ -22,72 +22,37 @@ import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import './index.css';
 
+/** Shared full-screen loading spinner */
+function AppLoadingSpinner() {
+  return (
+    <div className="app-loading-screen">
+      <div className="app-loading-spinner" />
+    </div>
+  );
+}
+
 /** Route guard: redirect to login if not authenticated */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div className="skeleton" style={{ width: '120px', height: '20px' }} />
-      </div>
-    );
-  }
-
+  if (loading) return <AppLoadingSpinner />;
   return user ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
 /** Route guard: redirect to home if already authenticated */
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div className="skeleton" style={{ width: '120px', height: '20px' }} />
-      </div>
-    );
-  }
-
+  if (loading) return <AppLoadingSpinner />;
   return user ? <Navigate to="/" replace /> : <>{children}</>;
-}
-
-/** Root component that checks auth for the landing vs home page */
-function RootPage() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div className="skeleton" style={{ width: '120px', height: '20px' }} />
-      </div>
-    );
-  }
-
-  // Authenticated users see the app layout, unauthenticated see landing
-  return user ? (
-    <ProtectedRoute>
-      <Layout />
-    </ProtectedRoute>
-  ) : (
-    <LandingPage />
-  );
 }
 
 function AppRoutes() {
   const { user, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <div className="skeleton" style={{ width: '120px', height: '20px' }} />
-      </div>
-    );
-  }
+  if (loading) return <AppLoadingSpinner />;
 
   return (
     <Routes>
-      {/* Root: Landing page for guests, App Home for authenticated users */}
+      {/* Root: Landing page for guests, Home for authenticated users */}
       <Route
         path="/"
         element={

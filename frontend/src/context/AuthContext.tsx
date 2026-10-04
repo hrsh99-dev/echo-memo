@@ -53,13 +53,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUser]);
 
   const login = async (email: string, password: string) => {
+    // Login sets tokens, then fetch user profile in one chain — no redundant calls
     await api.login(email, password);
-    await fetchUser();
+    const userData = await api.getMe();
+    setUser(userData);
   };
 
   const register = async (email: string, password: string, name: string) => {
     await api.register(email, password, name);
-    await fetchUser();
+    const userData = await api.getMe();
+    setUser(userData);
   };
 
   const logout = async () => {

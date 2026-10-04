@@ -46,13 +46,24 @@ async def readiness():
     }
 
 
+DEMO_EMAILS = {"arjun.sharma@iitb.ac.in", "demo@echomemo.ai"}
+
+
 @router.delete("/api/v1/account", response_model=MessageResponse)
 async def delete_account(user: dict = Depends(get_current_user)):
     """
     Delete the current user's account and all associated data.
+    Demo accounts cannot be deleted by users — only by an admin directly.
     """
     db = get_database()
     user_id = user["_id"]
+
+    # Protect demo accounts from deletion
+    if user.get("email_normalized", "") in DEMO_EMAILS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Demo accounts cannot be deleted. This account is managed by the platform.",
+        )
 
     # Delete all user's notes
     await db.notes.delete_many({"user_id": user_id})

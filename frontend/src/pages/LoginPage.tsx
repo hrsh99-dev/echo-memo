@@ -4,26 +4,27 @@
 
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
 import Logo from '../components/Logo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { login } = useAuth();
-  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
     try {
       await login(email, password);
       navigate('/');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Login failed', 'error');
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -40,18 +41,27 @@ export default function LoginPage() {
           <p>Sign in to your EchoMemo account</p>
         </div>
 
+        {/* Inline error banner */}
+        {error && (
+          <div className="auth-error-banner" role="alert">
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="email" className="form-label">Email</label>
             <input
               id="email"
               type="email"
-              className="form-input"
+              className={`form-input${error ? ' form-input-error' : ''}`}
               placeholder="you@example.com"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={e => { setEmail(e.target.value); setError(null); }}
               required
               autoComplete="email"
+              disabled={loading}
             />
           </div>
 
@@ -60,12 +70,13 @@ export default function LoginPage() {
             <input
               id="password"
               type="password"
-              className="form-input"
+              className={`form-input${error ? ' form-input-error' : ''}`}
               placeholder="••••••••"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={e => { setPassword(e.target.value); setError(null); }}
               required
               autoComplete="current-password"
+              disabled={loading}
             />
           </div>
 
@@ -76,7 +87,12 @@ export default function LoginPage() {
           </div>
 
           <button type="submit" className="btn btn-primary btn-lg" disabled={loading} style={{ width: '100%' }}>
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? (
+              <>
+                <Loader2 size={16} className="spin" />
+                Signing in…
+              </>
+            ) : 'Sign In'}
           </button>
         </form>
 
