@@ -81,6 +81,13 @@ async def register(request: RegisterRequest):
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
+        user=UserResponse(
+            id=user_id,
+            email=email_normalized,
+            name=user_doc["name"],
+            created_at=now.isoformat(),
+            settings=user_doc["settings"],
+        ),
     )
 
 
@@ -120,9 +127,19 @@ async def login(request: LoginRequest):
 
     logger.info("user_login", user_id=user_id)
 
+    created_at_val = user.get("created_at")
+    created_at_str = created_at_val.isoformat() if hasattr(created_at_val, "isoformat") else str(created_at_val or now.isoformat())
+
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
+        user=UserResponse(
+            id=user_id,
+            email=email_normalized,
+            name=user.get("name", ""),
+            created_at=created_at_str,
+            settings=user.get("settings", {}),
+        ),
     )
 
 

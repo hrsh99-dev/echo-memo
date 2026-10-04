@@ -51,6 +51,21 @@ function parseApiError(errorData: unknown): string {
   return 'An error occurred. Please try again.';
 }
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string;
+  created_at: string;
+  settings: Record<string, unknown>;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type?: string;
+  user?: UserProfile;
+}
+
 class ApiClient {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
@@ -196,8 +211,8 @@ class ApiClient {
   }
 
   // ===== Auth =====
-  async register(email: string, password: string, name: string) {
-    const data = await this.request<{access_token: string; refresh_token: string}>(
+  async register(email: string, password: string, name: string): Promise<AuthResponse> {
+    const data = await this.request<AuthResponse>(
       '/api/v1/auth/register',
       { method: 'POST', body: JSON.stringify({ email, password, name }) },
       true
@@ -206,8 +221,8 @@ class ApiClient {
     return data;
   }
 
-  async login(email: string, password: string) {
-    const data = await this.request<{access_token: string; refresh_token: string}>(
+  async login(email: string, password: string): Promise<AuthResponse> {
+    const data = await this.request<AuthResponse>(
       '/api/v1/auth/login',
       { method: 'POST', body: JSON.stringify({ email, password }) },
       true

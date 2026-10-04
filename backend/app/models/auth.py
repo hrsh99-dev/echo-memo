@@ -2,8 +2,29 @@
 Pydantic schemas for authentication endpoints.
 """
 
+from typing import Optional
 from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
+
+
+class UserResponse(BaseModel):
+    """Public user profile response."""
+    id: str
+    email: str
+    name: str
+    created_at: str
+    settings: dict = {}
+
+    class Config:
+        from_attributes = True
+
+
+class TokenResponse(BaseModel):
+    """JWT token pair response."""
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    user: Optional[UserResponse] = None
 
 
 class RegisterRequest(BaseModel):
@@ -30,11 +51,6 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class TokenResponse(BaseModel):
-    """JWT token pair response."""
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
 
 
 class RefreshRequest(BaseModel):
@@ -53,16 +69,6 @@ class ResetPasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=128)
 
 
-class UserResponse(BaseModel):
-    """Public user profile response."""
-    id: str
-    email: str
-    name: str
-    created_at: str
-    settings: dict = {}
-
-    class Config:
-        from_attributes = True
 
 
 class MessageResponse(BaseModel):

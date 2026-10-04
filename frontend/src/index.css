@@ -894,13 +894,34 @@ a:hover {
   animation: spinner 0.7s linear infinite;
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes spinner {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ===== Spin utility (for Loader2 icon) ===== */
 .spin {
-  animation: spinner 0.8s linear infinite;
+  display: inline-block !important;
+  transform-origin: center center !important;
+  animation: spin 0.75s linear infinite !important;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.landing-submit-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
 }
 
 @keyframes slideIn {

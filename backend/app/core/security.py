@@ -14,21 +14,30 @@ from bson import ObjectId
 import hashlib
 import secrets
 import structlog
+import bcrypt
 
 logger = structlog.get_logger()
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security_scheme = HTTPBearer(auto_error=False)
 
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt."""
-    return pwd_context.hash(password)
+    """Hash a password using native bcrypt."""
+    pwd_bytes = password.encode("utf-8")
+    salt = bcrypt.gensalt(rounds=10)
+    return bcrypt.hashpw(pwd_bytes, salt).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against its bcrypt hash."""
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            hashed_password.encode("utf-8"),
+        )
+    except Exception as e:
+        logger.warning("password_verification_failed", error=str(e))
+        return False
 
 
 def create_access_token(user_id: str, email: str) -> str:

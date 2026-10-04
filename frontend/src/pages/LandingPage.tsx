@@ -17,6 +17,7 @@ export default function LandingPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingDemo, setLoadingDemo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const { login, register } = useAuth();
@@ -73,7 +74,7 @@ export default function LandingPage() {
     setError(null);
     setEmail('arjun.sharma@iitb.ac.in');
     setPassword('Demo@1234');
-    setLoading(true);
+    setLoadingDemo(true);
     try {
       await login('arjun.sharma@iitb.ac.in', 'Demo@1234');
       navigate('/');
@@ -82,7 +83,7 @@ export default function LandingPage() {
       setError(msg);
       showToast(msg, 'error');
     } finally {
-      setLoading(false);
+      setLoadingDemo(false);
     }
   };
 
@@ -204,7 +205,7 @@ export default function LandingPage() {
             <button
               type="submit"
               className="landing-submit-btn"
-              disabled={loading}
+              disabled={loading || loadingDemo}
             >
               {loading ? (
                 <>
@@ -225,11 +226,20 @@ export default function LandingPage() {
             type="button"
             className="landing-demo-pill"
             onClick={handleFillDemo}
-            disabled={loading}
+            disabled={loading || loadingDemo}
             title="Log in immediately with pre-seeded student demo account"
           >
-            <Sparkles size={14} />
-            <span>One-Click Demo Login (Arjun · IIT Bombay)</span>
+            {loadingDemo ? (
+              <>
+                <Loader2 size={14} className="spin" />
+                <span>Signing in as Arjun…</span>
+              </>
+            ) : (
+              <>
+                <Sparkles size={14} />
+                <span>One-Click Demo Login (Arjun · IIT Bombay)</span>
+              </>
+            )}
           </button>
 
           {mode === 'login' && (
