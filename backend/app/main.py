@@ -12,6 +12,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.core.config import get_settings
 from app.core.database import connect_db, close_db
+from fastapi.exceptions import RequestValidationError
 from app.routers import auth, notes, capture, assistant, health, inbox, tasks
 import structlog
 import time
@@ -82,6 +83,21 @@ def create_app() -> FastAPI:
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
 
         return response
+
+    # Validation error handler for user-friendly 422 messages
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        errors = []
+        for error in exc.errors():
+            msg = error.get("msg", "Invalid field")
+            if msg.startswith("Value error, "):
+                msg = msg[len("Value error, "):]
+            errors.append(msg)
+        error_detail = "; ".join(errors) if errors else "Invalid request data."
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"detail": error_detail},
+        )
 
     # Global exception handler
     @app.exception_handler(Exception)

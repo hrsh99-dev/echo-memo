@@ -6,7 +6,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowRight, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import Logo from '../components/Logo';
@@ -17,36 +17,60 @@ export default function LandingPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const { login, register } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  const validatePassword = (pwd: string): string | null => {
+    if (pwd.length < 8) return 'Password must be at least 8 characters long';
+    if (!/[A-Z]/.test(pwd)) return 'Password must contain at least one uppercase letter';
+    if (!/[a-z]/.test(pwd)) return 'Password must contain at least one lowercase letter';
+    if (!/\d/.test(pwd)) return 'Password must contain at least one digit';
+    return null;
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (mode === 'register') {
+      if (!name.trim()) {
+        const msg = 'Name is required';
+        setError(msg);
+        showToast(msg, 'error');
+        return;
+      }
+      const pwdErr = validatePassword(password);
+      if (pwdErr) {
+        setError(pwdErr);
+        showToast(pwdErr, 'error');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       if (mode === 'login') {
-        await login(email, password);
+        await login(email.trim(), password);
         navigate('/');
       } else {
-        if (!name.trim()) {
-          showToast('Name is required', 'error');
-          setLoading(false);
-          return;
-        }
-        await register(email, password, name.trim());
+        await register(email.trim(), password, name.trim());
         showToast('Account created successfully! Welcome to EchoMemo.', 'success');
         navigate('/');
       }
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Authentication failed', 'error');
+      const msg = err instanceof Error ? err.message : 'Authentication failed';
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
   };
 
   const handleFillDemo = async () => {
+    setError(null);
     setEmail('arjun.sharma@iitb.ac.in');
     setPassword('Demo@1234');
     setLoading(true);
@@ -54,7 +78,9 @@ export default function LandingPage() {
       await login('arjun.sharma@iitb.ac.in', 'Demo@1234');
       navigate('/');
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Demo login failed', 'error');
+      const msg = err instanceof Error ? err.message : 'Demo login failed';
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -114,18 +140,26 @@ export default function LandingPage() {
             <button
               type="button"
               className={`landing-toggle-btn ${mode === 'login' ? 'active' : ''}`}
-              onClick={() => setMode('login')}
+              onClick={() => { setMode('login'); setError(null); }}
             >
               Sign In
             </button>
             <button
               type="button"
               className={`landing-toggle-btn ${mode === 'register' ? 'active' : ''}`}
-              onClick={() => setMode('register')}
+              onClick={() => { setMode('register'); setError(null); }}
             >
               Create Account
             </button>
           </div>
+
+          {/* Inline error banner */}
+          {error && (
+            <div className="auth-error-banner" role="alert" style={{ marginBottom: 'var(--space-4)' }}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
 
           {/* Form */}
           <form className="landing-form" onSubmit={handleSubmit}>
@@ -133,10 +167,10 @@ export default function LandingPage() {
               <div>
                 <input
                   type="text"
-                  className="form-input"
+                  className={`form-input${error ? ' form-input-error' : ''}`}
                   placeholder="Your Full Name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => { setName(e.target.value); setError(null); }}
                   required
                 />
               </div>
@@ -145,10 +179,10 @@ export default function LandingPage() {
             <div>
               <input
                 type="email"
-                className="form-input"
+                className={`form-input${error ? ' form-input-error' : ''}`}
                 placeholder="name@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setError(null); }}
                 required
                 autoComplete="email"
               />
@@ -157,10 +191,10 @@ export default function LandingPage() {
             <div>
               <input
                 type="password"
-                className="form-input"
-                placeholder="Password"
+                className={`form-input${error ? ' form-input-error' : ''}`}
+                placeholder="Password (min 8 chars, uppercase, lowercase, digit)"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => { setPassword(e.target.value); setError(null); }}
                 required
                 minLength={8}
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}

@@ -5,8 +5,50 @@
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-interface ApiError {
-  detail: string;
+function parseApiError(errorData: unknown): string {
+  if (!errorData) return 'An unexpected error occurred';
+  if (typeof errorData === 'string') {
+    return errorData.replace(/^Value error,\s*/i, '');
+  }
+
+  if (typeof errorData === 'object' && errorData !== null) {
+    const data = errorData as Record<string, unknown>;
+
+    // 1. FastAPI `detail` field
+    if (typeof data.detail === 'string') {
+      return data.detail.replace(/^Value error,\s*/i, '');
+    }
+
+    if (Array.isArray(data.detail)) {
+      const messages = data.detail
+        .map((item: unknown) => {
+          if (typeof item === 'string') return item.replace(/^Value error,\s*/i, '');
+          if (typeof item === 'object' && item !== null) {
+            const errObj = item as Record<string, unknown>;
+            const msg = typeof errObj.msg === 'string'
+              ? errObj.msg
+              : (typeof errObj.message === 'string' ? errObj.message : '');
+            return msg.replace(/^Value error,\s*/i, '');
+          }
+          return '';
+        })
+        .filter(Boolean);
+
+      if (messages.length > 0) {
+        return messages.join('. ');
+      }
+    }
+
+    // 2. Standard `message` or `error` field
+    if (typeof data.message === 'string') {
+      return data.message.replace(/^Value error,\s*/i, '');
+    }
+    if (typeof data.error === 'string') {
+      return data.error.replace(/^Value error,\s*/i, '');
+    }
+  }
+
+  return 'An error occurred. Please try again.';
 }
 
 class ApiClient {
@@ -106,14 +148,20 @@ class ApiClient {
     if (!response.ok) {
       let errorMessage = 'An error occurred';
       try {
-        const error: ApiError = await response.json();
-        errorMessage = error.detail || errorMessage;
+        const errorData = await response.json();
+        errorMessage = parseApiError(errorData);
       } catch {
         // Fallback for non-JSON errors (502, 503 from proxy, etc.)
         if (response.status >= 500) {
           errorMessage = 'Server is temporarily unavailable. Please try again in a moment.';
         } else if (response.status === 429) {
           errorMessage = 'Too many requests. Please wait a moment and try again.';
+        } else if (response.status === 404) {
+          errorMessage = 'The requested resource was not found.';
+        } else if (response.status === 403) {
+          errorMessage = 'You do not have permission to perform this action.';
+        } else if (response.status === 401) {
+          errorMessage = 'Authentication required. Please sign in.';
         }
       }
       throw new Error(errorMessage);

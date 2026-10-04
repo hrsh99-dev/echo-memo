@@ -12,7 +12,7 @@ interface Toast {
 }
 
 interface ToastContextType {
-  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  showToast: (message: string | unknown, type?: 'success' | 'error' | 'info') => void;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
@@ -28,9 +28,23 @@ const TOAST_ICONS = {
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const showToast = useCallback((message: string | unknown, type: 'success' | 'error' | 'info' = 'info') => {
     const id = ++toastId;
-    setToasts(prev => [...prev, { id, message, type }]);
+    let text = '';
+    if (typeof message === 'string') {
+      text = message;
+    } else if (message instanceof Error) {
+      text = message.message;
+    } else if (typeof message === 'object' && message !== null) {
+      const obj = message as Record<string, unknown>;
+      if (typeof obj.message === 'string') text = obj.message;
+      else if (typeof obj.detail === 'string') text = obj.detail;
+      else text = 'An unexpected notification occurred';
+    } else {
+      text = String(message ?? '');
+    }
+
+    setToasts(prev => [...prev, { id, message: text, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 5000);
@@ -48,14 +62,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           const Icon = TOAST_ICONS[toast.type];
           return (
             <div key={toast.id} className={`toast toast-${toast.type}`} role="alert">
-              <Icon size={16} className="toast-icon" />
+              <Icon size={18} className="toast-icon" />
               <span className="toast-message">{toast.message}</span>
               <button
+                type="button"
                 className="toast-dismiss"
                 onClick={() => dismiss(toast.id)}
                 aria-label="Dismiss notification"
+                title="Dismiss"
               >
-                <X size={14} />
+                <X size={14} strokeWidth={2.2} />
               </button>
             </div>
           );
