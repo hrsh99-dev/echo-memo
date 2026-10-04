@@ -454,8 +454,13 @@ async def seed():
             doc["inbox_metadata"] = meta
         res = await db.notes.insert_one(doc)
         note_ids[nd["title"]] = res.inserted_id
+        try:
+            from app.services.embedding_service import create_note_chunks
+            await create_note_chunks(str(res.inserted_id), str(uid), nd["title"], nd["body"])
+        except Exception as embed_err:
+            print(f"    Notice: could not embed {nd['title']}: {embed_err}")
 
-    print(f"  {len(notes_data)} notes created")
+    print(f"  {len(notes_data)} notes created and embedded")
 
     # ── Tasks ─────────────────────────────────────────────────────────────────
     os_nid    = note_ids["OS Lecture - Process Scheduling"]

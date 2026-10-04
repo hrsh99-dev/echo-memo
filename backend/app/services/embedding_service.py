@@ -3,6 +3,7 @@ Embedding service: generate embeddings and manage vector chunks using Google Gem
 """
 
 import asyncio
+import re
 from typing import List, Optional
 from bson import ObjectId
 from datetime import datetime, timezone
@@ -102,91 +103,179 @@ async def create_note_chunks(note_id: str, user_id: str, title: str, body: str) 
     return True
 
 
+async def ensure_notes_embedded(user_id: str):
+    """Ensure all user's notes have vector chunks in note_chunks."""
+    db = get_database()
+    try:
+        notes = await db.notes.find({"user_id": ObjectId(user_id)}).to_list(100)
+        chunk_note_ids = set(await db.note_chunks.distinct("note_id", {"user_id": ObjectId(user_id)}))
+        for note in notes:
+            if note["_id"] not in chunk_note_ids:
+                asyncio.create_task(create_note_chunks(
+                    str(note["_id"]),
+                    user_id,
+                    note.get("title", ""),
+                    note.get("body", "")
+                ))
+    except Exception as e:
+        logger.warning("ensure_notes_embedded_failed", error=str(e))
+
+
+async def _keyword_search(user_id: str, query: str, limit: int = 5) -> List[dict]:
+    """Find notes by keyword in title and body using regex search."""
+    db = get_database()
+    try:
+        stop_words = {
+            "what", "when", "where", "which", "who", "whom", "whose", "why", "how",
+            "did", "does", "done", "doing", "wrote", "write", "written", "about",
+            "have", "has", "had", "with", "from", "that", "this", "these", "those",
+            "your", "mine", "tell", "show", "give", "notes", "note", "saved"
+        }
+        raw_words = re.findall(r"\b[A-Za-z0-9_-]+\b", query.lower())
+        terms = [w for w in raw_words if len(w) >= 2 and w not in stop_words]
+
+        if not terms:
+            return []
+
+        regex_pattern = "|".join(re.escape(t) for t in terms)
+        cursor = db.notes.find({
+            "user_id": ObjectId(user_id),
+            "$or": [
+                {"title": {"$regex": regex_pattern, "$options": "i"}},
+                {"body": {"$regex": regex_pattern, "$options": "i"}},
+            ]
+        }).limit(limit)
+
+        matched_notes = await cursor.to_list(length=limit)
+        results = []
+        for n in matched_notes:
+            body = n.get("body", "") or ""
+            title = n.get("title", "Untitled Note")
+            results.append({
+                "note_id": str(n["_id"]),
+                "title": title,
+                "excerpt": f"{title}\n\n{body}"[:500],
+                "score": 0.85,
+                "user_id": user_id,
+            })
+        return results
+    except Exception as e:
+        logger.error("keyword_search_failed", error=str(e))
+        return []
+
+
 async def semantic_search(
     user_id: str,
     query: str,
     limit: int = 5,
-    score_threshold: float = 0.5,
+    score_threshold: float = 0.3,
 ) -> List[dict]:
     """
-    Perform semantic search over user's note chunks using MongoDB Atlas Vector Search.
-    Falls back to text search if vector search is unavailable.
+    Perform hybrid retrieval over user's notes:
+    1. Vector similarity search over note_chunks
+    2. Direct keyword / regex search over notes
+    3. Merged and deduplicated candidate ranking
     """
     db = get_database()
     settings = get_settings()
 
-    if not settings.gemini_configured:
-        return await _keyword_fallback(user_id, query, limit)
+    # Trigger background embedding of any unembedded notes
+    await ensure_notes_embedded(user_id)
 
-    query_embedding = await generate_query_embedding(query)
-    if query_embedding is None:
-        return await _keyword_fallback(user_id, query, limit)
+    vector_results: List[dict] = []
 
-    try:
-        # MongoDB Atlas Vector Search aggregation
-        pipeline = [
-            {
-                "$vectorSearch": {
-                    "index": settings.vector_search_index,
-                    "path": "embedding",
-                    "queryVector": query_embedding,
-                    "numCandidates": limit * 10,
-                    "limit": limit,
-                    "filter": {
-                        "user_id": ObjectId(user_id),
+    if settings.gemini_configured:
+        query_embedding = await generate_query_embedding(query)
+        if query_embedding is not None:
+            try:
+                # MongoDB Atlas Vector Search aggregation
+                pipeline = [
+                    {
+                        "$vectorSearch": {
+                            "index": settings.vector_search_index,
+                            "path": "embedding",
+                            "queryVector": query_embedding,
+                            "numCandidates": limit * 10,
+                            "limit": limit,
+                            "filter": {
+                                "user_id": ObjectId(user_id),
+                            },
+                        }
                     },
-                }
-            },
-            {
-                "$addFields": {
-                    "score": {"$meta": "vectorSearchScore"},
-                }
-            },
-            {
-                "$match": {
-                    "score": {"$gte": score_threshold},
-                }
-            },
-            {
-                "$lookup": {
-                    "from": "notes",
-                    "localField": "note_id",
-                    "foreignField": "_id",
-                    "as": "note",
-                }
-            },
-            {
-                "$unwind": "$note",
-            },
-            {
-                "$project": {
-                    "note_id": {"$toString": "$note_id"},
-                    "title": "$note.title",
-                    "excerpt": "$text",
-                    "score": 1,
-                    "user_id": 1,
-                }
-            },
-        ]
+                    {
+                        "$addFields": {
+                            "score": {"$meta": "vectorSearchScore"},
+                        }
+                    },
+                    {
+                        "$match": {
+                            "score": {"$gte": score_threshold},
+                        }
+                    },
+                    {
+                        "$lookup": {
+                            "from": "notes",
+                            "localField": "note_id",
+                            "foreignField": "_id",
+                            "as": "note",
+                        }
+                    },
+                    {
+                        "$unwind": "$note",
+                    },
+                    {
+                        "$project": {
+                            "note_id": {"$toString": "$note_id"},
+                            "title": "$note.title",
+                            "excerpt": "$text",
+                            "score": 1,
+                            "user_id": 1,
+                        }
+                    },
+                ]
 
-        cursor = db.note_chunks.aggregate(pipeline)
-        results = await asyncio.wait_for(cursor.to_list(length=limit), timeout=2.5)
+                cursor = db.note_chunks.aggregate(pipeline)
+                results = await asyncio.wait_for(cursor.to_list(length=limit), timeout=2.5)
 
-        # Verify ownership (defense in depth)
-        verified_results = [
-            r for r in results
-            if str(r.get("user_id")) == user_id or r.get("user_id") == ObjectId(user_id)
-        ]
+                verified_results = [
+                    r for r in results
+                    if str(r.get("user_id")) == user_id or r.get("user_id") == ObjectId(user_id)
+                ]
 
-        if verified_results:
-            return verified_results
+                if verified_results:
+                    vector_results = verified_results
+                else:
+                    vector_results = await _cosine_search(user_id, query, query_embedding, limit, score_threshold)
 
-        # If Atlas vector index returned 0 results, fall back to in-memory cosine similarity
-        return await _cosine_search(user_id, query, query_embedding, limit, score_threshold)
+            except Exception as e:
+                logger.warning("vector_search_atlas_index_unavailable_fallback_to_cosine", error=str(e))
+                vector_results = await _cosine_search(user_id, query, query_embedding, limit, score_threshold)
 
-    except Exception as e:
-        logger.warning("vector_search_atlas_index_unavailable_fallback_to_cosine", error=str(e))
-        return await _cosine_search(user_id, query, query_embedding, limit, score_threshold)
+    # Keyword search for direct term matches
+    keyword_results = await _keyword_search(user_id, query, limit=limit)
+
+    # Hybrid merge: deduplicate by note_id
+    seen_ids = set()
+    combined_results: List[dict] = []
+
+    # Prioritize vector results that meet threshold, interspersed with keyword matches
+    for res in keyword_results:
+        nid = str(res.get("note_id"))
+        if nid not in seen_ids:
+            seen_ids.add(nid)
+            combined_results.append(res)
+
+    for res in vector_results:
+        nid = str(res.get("note_id"))
+        if nid not in seen_ids:
+            seen_ids.add(nid)
+            combined_results.append(res)
+
+    if combined_results:
+        return combined_results[:limit]
+
+    # Final fallback to mongo text search if everything else returned nothing
+    return await _keyword_fallback(user_id, query, limit)
 
 
 async def _cosine_search(
@@ -231,7 +320,7 @@ async def _cosine_search(
     except Exception as local_err:
         logger.error("local_cosine_similarity_failed", error=str(local_err))
 
-    return await _keyword_fallback(user_id, query, limit)
+    return []
 
 
 async def _keyword_fallback(user_id: str, query: str, limit: int) -> List[dict]:
